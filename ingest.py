@@ -169,7 +169,7 @@ def validate_similar_names(new_names: List[str], existing_names: List[str], text
                 
             # Check Levenshtein distance
             dist = distance(new_name, existing_name)
-            if 1 <= dist <= 3:
+            if 1 <= dist <= 2:
                 errors.append(
                     f"Warning: Name '{new_name}' in {text_file_path} is similar to "
                     f"existing '{existing_name}' (+-{dist} character).\n"
