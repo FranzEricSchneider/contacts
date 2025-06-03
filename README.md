@@ -13,18 +13,35 @@ pip install -r requirements.txt
 pip install -e .
 ```
 
-4. Make an autostart desktop file at `~/.config/autostart/check-contacts.desktop`
+4. Make systemd startup file at `~/.config/systemd/user/check-contacts.service`
 
 ```
-[Desktop Entry]
-Type=Application
-Exec=python3 -m contacts.check_contacts
-Hidden=false
-NoDisplay=false
-X-GNOME-Autostart-enabled=true
-Name=Check Contacts
-Comment=Popup to remind you to contact people
+[Unit]
+Description=Check overdue contacts and show Zenity popup
+After=graphical-session.target
+Wants=graphical-session.target
+
+[Service]
+Environment=CONTACTS=/home/<username>/.contacts.yaml
+ExecStart=/usr/bin/python3 -m contacts.check_contacts
+Restart=no
+
+[Install]
+WantedBy=graphical-session.target
+
 ```
+
+5. Enable it
+```bash
+systemctl --user daemon-reload
+systemctl --user enable check-contacts
+```
+
+6. To test it immediately
+```bash
+systemctl --user start check-contacts
+```
+
 
 ## Environmental Requirements
 
