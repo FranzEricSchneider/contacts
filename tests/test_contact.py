@@ -6,7 +6,7 @@ from pathlib import Path
 import tempfile
 import yaml
 
-from contact import Contact
+from contacts import Contact
 
 
 class TestContact(unittest.TestCase):

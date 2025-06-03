@@ -1,4 +1,3 @@
-# contacts
 Manage a list of contacts
 
 ## Installation
@@ -9,10 +8,27 @@ Manage a list of contacts
 pip install -r requirements.txt
 ```
 
-## Environmental Requirements
-* Needs a CONTACTS environmental variable with the path to the contacts file
+3. Install the repo
+```
+pip install -e .
+```
 
-This can be done, for example, by adding this to `.bash_aliases`
+4. Make an autostart desktop file at `~/.config/autostart/check-contacts.desktop`
+
+```
+[Desktop Entry]
+Type=Application
+Exec=python3 -m contacts.check_contacts
+Hidden=false
+NoDisplay=false
+X-GNOME-Autostart-enabled=true
+Name=Check Contacts
+Comment=Popup to remind you to contact people
+```
+
+## Environmental Requirements
+
+Needs a CONTACTS environmental variable with the path to the contacts file. This can be done, for example, by adding this to `.bash_aliases`:
 ```bash
 export CONTACTS=$HOME/.contacts.yaml
 ```

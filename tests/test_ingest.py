@@ -5,8 +5,8 @@ from pathlib import Path
 import tempfile
 from typing import List
 
-from contact import Contact
-from ingest import (
+from contacts import Contact
+from contacts.ingest import (
     parse_text_file,
     update_contacts,
     load_contacts,

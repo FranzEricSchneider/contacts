@@ -11,8 +11,8 @@ from collections import defaultdict
 from Levenshtein import distance
 from colorama import Fore, Style, init
 
-from contact import Contact
-from ingest import load_contacts
+from contacts.contact import Contact
+from contacts.ingest import load_contacts
 
 
 def get_last_name(name: str) -> str:
