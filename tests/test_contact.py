@@ -1,7 +1,7 @@
 """Unit tests for the Contact class."""
 
 import unittest
-from datetime import datetime
+from datetime import datetime, timedelta
 from pathlib import Path
 import tempfile
 import yaml
@@ -37,10 +37,10 @@ class TestContact(unittest.TestCase):
         self.contact.update_data("tag", "test")
         self.contact.update_data("url", "http://test.com")
         self.contact.update_data("frequency", "weekly")
-        
+
         # Convert to dict and back
         new_contact = Contact.from_dict(self.contact.to_dict())
-        
+
         # Compare all fields
         for field in self.contact.__dataclass_fields__:
             self.assertEqual(getattr(new_contact, field), getattr(self.contact, field))
@@ -52,7 +52,7 @@ class TestContact(unittest.TestCase):
             ("tag", ["work", "important"]),
             ("url", ["http://example.com", "https://test.com"]),
         ]
-        
+
         for field, values in test_cases:
             with self.subTest(field=field, values=values):
                 # Reset contact for each subtest to ensure clean state
@@ -71,7 +71,7 @@ class TestContact(unittest.TestCase):
             ("address", "2024-01-01: 123 Test St", "123 Test St"),
             ("update", "2024-01-01: Initial contact", "Initial contact"),
         ]
-        
+
         for field, value, expected_text in test_cases:
             with self.subTest(field=field):
                 self.setUp()
@@ -103,6 +103,24 @@ class TestContact(unittest.TestCase):
                 with self.assertRaises(ValueError) as cm:
                     self.contact.update_data(field, "01/01/2024: Invalid format")
                 self.assertIn("does not match format", str(cm.exception))
+
+    def test_get_frequency_timedelta(self):
+        """Test conversion of frequency strings to timedelta objects."""
+        test_cases = [
+            ("5d", timedelta(days=5)),
+            ("7w", timedelta(weeks=7)),
+            ("2m", timedelta(days=60)),  # 2 months * 30 days
+            ("", None),  # Empty frequency
+            ("invalid", None),  # Invalid format
+            ("5x", None),  # Invalid unit
+            ("ad", None),  # Invalid number
+        ]
+
+        for freq, expected in test_cases:
+            with self.subTest(frequency=freq, expected=expected):
+                self.contact.frequency = freq
+                result = self.contact.get_frequency_timedelta()
+                self.assertEqual(result, expected)
 
 
 if __name__ == "__main__":

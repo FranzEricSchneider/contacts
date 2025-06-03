@@ -6,7 +6,7 @@ import os
 from pathlib import Path
 from typing import Dict, List, Set
 import yaml
-from datetime import datetime
+from datetime import datetime, timedelta
 from collections import defaultdict
 from Levenshtein import distance
 from colorama import Fore, Style, init
@@ -32,7 +32,7 @@ def get_field_color(contact: Contact, field_name: str) -> str:
     """Determine the color for a field based on its content and issues."""
 
     field_value = getattr(contact, field_name, [])
-    
+
     # Check for issues in the field
     if field_name == "name":
         if has_issues(contact.name, name=True):
@@ -51,7 +51,7 @@ def get_field_color(contact: Contact, field_name: str) -> str:
             return Fore.YELLOW
         else:
             return Fore.YELLOW
-            
+
     # No issues, has content
     return Style.DIM
 
@@ -67,68 +67,105 @@ def print_missing(contacts: List[Contact]) -> None:
     """Print all names and their field statuses."""
     # Initialize colorama for cross-platform color support
     init()
-    
+
     # Define fields to check in order
     fields = ["name", "address", "update", "frequency", "tag", "characteristic", "url"]
-    
+
     # Print each contact name with padding
     for contact in sorted(contacts, key=lambda x: get_last_name(x.name)):
         print(f"{contact.name:<25}", end="")
-        
+
         # Print status for each field
         for field in fields[1:]:  # Skip 'name' as it's already printed
             print(format_field_name(contact, field), end="    ")
         print()  # New line after each contact
 
 
+def format_timedelta(delta: timedelta) -> str:
+    """Format a timedelta into a human-readable string."""
+    days = delta.days
+    if days < 0:
+        return "future"
+    elif days < 7:
+        return f"{days}d"
+    elif days < 30:
+        return f"{days // 7}w"
+    elif days < 365:
+        return f"{days // 30}m"
+    else:
+        return f"{days // 365}y"
+
+
+def get_last_contact_info(contact: Contact) -> str:
+    """Get formatted string with time since last contact.
+
+    If the contact has a frequency set and the time since last contact
+    exceeds that frequency, the time will be shown in red.
+    """
+    latest_date = contact.get_latest_contact_date()
+    if not latest_date:
+        return ""
+
+    delta = datetime.now() - latest_date
+    time_str = format_timedelta(delta)
+
+    # Check if contact is overdue based on frequency
+    frequency_delta = contact.get_frequency_timedelta()
+    if frequency_delta and delta > frequency_delta:
+        return f"({Fore.RED}{time_str}{Style.RESET_ALL})"
+
+    return f"({time_str})"
+
+
 def print_people(contacts: List[Contact]) -> None:
-    """Print alphabetized list of contact names."""
-    for name in sorted((contact.name for contact in contacts), key=get_last_name):
-        print(name)
+    """Print alphabetized list of contact names with time since last contact."""
+    for contact in sorted(contacts, key=lambda x: get_last_name(x.name)):
+        print(f"{contact.name} {get_last_contact_info(contact)}")
 
 
 def print_places(contacts: List[Contact]) -> None:
-    """Print locations and the people at each location."""
+    """Print locations and the people at each location with time since last contact."""
     # Create a mapping of locations to people
     location_map = defaultdict(list)
-    
+
     for contact in contacts:
         # Get the most recent address
         if contact.address:
             latest_address = max(contact.address, key=lambda x: x[0])[1]
-            location_map[latest_address].append(contact.name)
-    
+            location_map[latest_address].append(contact)
+
     # Print locations and their people
     for location in sorted(location_map.keys()):
         print(f"\n{location.upper()}")
-        for name in sorted(location_map[location], key=get_last_name):
-            print(f"\t{name}")
+        for contact in sorted(
+            location_map[location], key=lambda x: get_last_name(x.name)
+        ):
+            print(f"\t{contact.name} {get_last_contact_info(contact)}")
 
 
 def find_best_match(partial_name: str, contacts: List[Contact]) -> Contact:
     """Find the contact that best matches the partial name."""
     if not contacts:
         raise ValueError("No contacts available")
-        
+
     # Find the best match using Levenshtein distance
     return min(
         contacts,
         key=lambda c: min(
-            distance(partial_name.lower(), part.lower())
-            for part in c.name.split()
-        )
+            distance(partial_name.lower(), part.lower()) for part in c.name.split()
+        ),
     )
 
 
 def print_person_summary(contact: Contact) -> None:
     """Print name, latest address, and all updates for a contact."""
-    print(f"\nName: {contact.name}")
-    
+    print(f"\nName: {contact.name} {get_last_contact_info(contact)}")
+
     # Print latest address
     if contact.address:
         latest_address = max(contact.address, key=lambda x: x[0])
         print(f"Address {latest_address[0].strftime('%Y-%m-%d')}: {latest_address[1]}")
-    
+
     # Print all updates
     if contact.update:
         print("Updates:")
@@ -138,31 +175,31 @@ def print_person_summary(contact: Contact) -> None:
 
 def print_person_all(contact: Contact) -> None:
     """Print all information for a contact."""
-    print(f"\nName: {contact.name}")
-    
+    print(f"\nName: {contact.name} {get_last_contact_info(contact)}")
+
     if contact.address:
         print("\nAddresses:")
         for date, addr in sorted(contact.address, key=lambda x: x[0], reverse=True):
             print(f"\t{date.strftime('%Y-%m-%d')}: {addr}")
-    
+
     if contact.frequency:
         print(f"\nFrequency: {contact.frequency}")
-    
+
     if contact.update:
         print("\nUpdates:")
         for date, update in sorted(contact.update, key=lambda x: x[0]):
             print(f"\t{date.strftime('%Y-%m-%d')}: {update}")
-    
+
     if contact.characteristic:
         print("\nCharacteristics:")
         for char in sorted(contact.characteristic):
             print(f"\t{char}")
-    
+
     if contact.tag:
         print("\nTags:")
         for tag in sorted(contact.tag):
             print(f"\t{tag}")
-    
+
     if contact.url:
         print("\nURLs:")
         for url in sorted(contact.url):
@@ -175,25 +212,39 @@ def main() -> None:
         description="Display contact information in various formats"
     )
     group = parser.add_mutually_exclusive_group(required=True)
-    group.add_argument("--people", action="store_true", help="Print alphabetized list of names")
-    group.add_argument("--places", action="store_true", help="Print locations and people at each location")
-    group.add_argument("--person", help="Print summary for person matching partial name")
-    group.add_argument("--all", help="Print all information for person matching partial name")
-    group.add_argument("--missing", action="store_true", help="Print all names with their field statuses")
-    
+    group.add_argument(
+        "--people", action="store_true", help="Print alphabetized list of names"
+    )
+    group.add_argument(
+        "--places",
+        action="store_true",
+        help="Print locations and people at each location",
+    )
+    group.add_argument(
+        "--person", help="Print summary for person matching partial name"
+    )
+    group.add_argument(
+        "--all", help="Print all information for person matching partial name"
+    )
+    group.add_argument(
+        "--missing",
+        action="store_true",
+        help="Print all names with their field statuses",
+    )
+
     args = parser.parse_args()
-    
+
     # Get YAML path from environment variable
     yaml_path = os.environ.get("CONTACTS")
     if not yaml_path:
         raise FileNotFoundError("Error: CONTACTS environment variable not set")
     yaml_path = Path(yaml_path)
-    
+
     # Load contacts
     contacts = load_contacts(yaml_path)
     if not contacts:
         raise ValueError(f"No contacts found in {yaml_path}")
-    
+
     # Process according to flags
     if args.people:
         print_people(contacts)
@@ -210,4 +261,4 @@ def main() -> None:
 
 
 if __name__ == "__main__":
-    main() 
+    main()
