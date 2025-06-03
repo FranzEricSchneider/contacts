@@ -50,6 +50,28 @@ Needs a CONTACTS environmental variable with the path to the contacts file. This
 export CONTACTS=$HOME/.contacts.yaml
 ```
 
+## Use
+
+You can ingest new content
+```bash
+./ingest.py updates.txt
+```
+
+If the updates are of the format
+```
+name
+key: content
+key: content
+
+name
+key:content
+```
+
+And you can print the contacts:
+```bash
+./print.py -h  # for multiple flag options
+```
+
 ## Testing
 
 The project uses pytest for testing. To run the tests:
