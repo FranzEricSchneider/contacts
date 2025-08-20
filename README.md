@@ -7,13 +7,14 @@ Manage a list of contacts
 ```bash
 pip install -r requirements.txt
 ```
+Note - the `/usr/bin/python3` part is so the system startup file will run. If you don't want to use that, you can just `pip` install in whatever environment you're using.
 
 3. Install the repo
 ```
 pip install -e .
 ```
 
-4. Make systemd startup file at `~/.config/systemd/user/check-contacts.service`
+4. Make systemd startup file at `~/.config/systemd/user/check-contacts.service`, replacing the `<username>` with your own. If you want to run in a miniconda environment, use `#!/home/<username>/miniconda3/bin/python3` instead of `/usr/bin/python3`.
 
 ```
 [Unit]
